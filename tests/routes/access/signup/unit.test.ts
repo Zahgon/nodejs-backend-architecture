@@ -20,9 +20,15 @@ import {
 import supertest from 'supertest';
 import app from '../../../../src/app';
 
+// fastify builds its router while booting, so the instance has to be ready
+// before its http server can answer the requests made by supertest
+beforeAll(async () => {
+  await app.ready();
+});
+
 describe('Signup basic route', () => {
   const endpoint = '/signup/basic';
-  const request = supertest(app);
+  const request = supertest(app.server);
 
   const email = 'abc@xyz.com';
 

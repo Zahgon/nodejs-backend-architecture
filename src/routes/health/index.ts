@@ -1,14 +1,10 @@
-import express from 'express';
+import { FastifyPluginAsync } from 'fastify';
 import { SuccessResponse } from '../../core/ApiResponse';
-import asyncHandler from '../../helpers/asyncHandler';
 
-const router = express.Router();
+const health: FastifyPluginAsync = async (router) => {
+  router.get('/', async (_req, res) => {
+    return new SuccessResponse('Success', { timestamp: new Date() }).send(res);
+  });
+};
 
-router.get(
-  '/',
-  asyncHandler(async (_, res) => {
-    new SuccessResponse('Success', { timestamp: new Date() }).send(res);
-  }),
-);
-
-export default router;
+export default health;

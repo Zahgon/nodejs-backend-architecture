@@ -14,9 +14,15 @@ import {
 import app from '../../../src/app';
 import supertest from 'supertest';
 
+// fastify builds its router while booting, so the instance has to be ready
+// before its http server can answer the requests made by supertest
+beforeAll(async () => {
+  await app.ready();
+});
+
 describe('authentication validation', () => {
   const endpoint = '/profile/my/test';
-  const request = supertest(app);
+  const request = supertest(app.server);
 
   beforeEach(() => {
     getAccessTokenSpy.mockClear();

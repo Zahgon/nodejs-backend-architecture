@@ -1,9 +1,8 @@
 import { RoleCode } from '../database/model/Role';
 import { RoleRequest } from 'app-request';
-import { Response, NextFunction } from 'express';
+import { FastifyReply } from 'fastify';
 
 export default (...roleCodes: RoleCode[]) =>
-  (req: RoleRequest, res: Response, next: NextFunction) => {
+  async (req: RoleRequest, _reply: FastifyReply): Promise<void> => {
     req.currentRoleCodes = roleCodes;
-    next();
   };

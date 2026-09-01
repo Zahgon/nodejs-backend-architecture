@@ -1,7 +1,8 @@
-import express from 'express';
+import { FastifyPluginAsync } from 'fastify';
 import health from './health';
 import apikey from '../auth/apikey';
 import permission from '../helpers/permission';
+import notFound from '../helpers/notFound';
 import { Permission } from '../database/model/ApiKey';
 import signup from './access/signup';
 import login from './access/login';
@@ -12,23 +13,28 @@ import blog from './blog';
 import blogs from './blogs';
 import profile from './profile';
 
-const router = express.Router();
+const routes: FastifyPluginAsync = async (router) => {
+  /*---------------------------------------------------------*/
+  router.register(health, { prefix: '/health' });
+  /*---------------------------------------------------------*/
+  router.register(async (secured) => {
+    /*---------------------------------------------------------*/
+    secured.addHook('preHandler', apikey);
+    /*---------------------------------------------------------*/
+    /*---------------------------------------------------------*/
+    secured.addHook('preHandler', permission(Permission.GENERAL));
+    /*---------------------------------------------------------*/
+    notFound(secured);
 
-/*---------------------------------------------------------*/
-router.use('/health', health);
-/*---------------------------------------------------------*/
-router.use(apikey);
-/*---------------------------------------------------------*/
-/*---------------------------------------------------------*/
-router.use(permission(Permission.GENERAL));
-/*---------------------------------------------------------*/
-router.use('/signup', signup);
-router.use('/login', login);
-router.use('/logout', logout);
-router.use('/token', token);
-router.use('/credential', credential);
-router.use('/profile', profile);
-router.use('/blog', blog);
-router.use('/blogs', blogs);
+    secured.register(signup, { prefix: '/signup' });
+    secured.register(login, { prefix: '/login' });
+    secured.register(logout, { prefix: '/logout' });
+    secured.register(token, { prefix: '/token' });
+    secured.register(credential, { prefix: '/credential' });
+    secured.register(profile, { prefix: '/profile' });
+    secured.register(blog, { prefix: '/blog' });
+    secured.register(blogs, { prefix: '/blogs' });
+  });
+};
 
-export default router;
+export default routes;

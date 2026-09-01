@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
 import { environment } from '../config';
 import {
   AuthFailureResponse,
@@ -27,7 +27,7 @@ export abstract class ApiError extends Error {
     super(type);
   }
 
-  public static handle(err: ApiError, res: Response): Response {
+  public static handle(err: ApiError, res: FastifyReply): FastifyReply {
     switch (err.type) {
       case ErrorType.BAD_TOKEN:
       case ErrorType.TOKEN_EXPIRED:

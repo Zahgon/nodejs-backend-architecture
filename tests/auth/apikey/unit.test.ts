@@ -4,9 +4,15 @@ import { API_KEY, mockFindApiKey } from './mock'; // mock should be imported on 
 import app from '../../../src/app';
 import supertest from 'supertest';
 
+// fastify builds its router while booting, so the instance has to be ready
+// before its http server can answer the requests made by supertest
+beforeAll(async () => {
+  await app.ready();
+});
+
 describe('apikey validation', () => {
   const endpoint = '/dummy/test';
-  const request = supertest(app);
+  const request = supertest(app.server);
 
   beforeEach(() => {
     mockFindApiKey.mockClear();

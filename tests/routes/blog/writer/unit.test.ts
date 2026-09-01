@@ -19,13 +19,19 @@ import supertest from 'supertest';
 import app from '../../../../src/app';
 import { Types } from 'mongoose';
 
+// fastify builds its router while booting, so the instance has to be ready
+// before its http server can answer the requests made by supertest
+beforeAll(async () => {
+  await app.ready();
+});
+
 describe('Writer blog create routes', () => {
   beforeEach(() => {
     mockBlogCreate.mockClear();
     mockBlogFindUrlIfExists.mockClear();
   });
 
-  const request = supertest(app);
+  const request = supertest(app.server);
   const endpoint = '/blog/writer';
 
   it('Should send error if the user do have writer role', async () => {
@@ -213,7 +219,7 @@ describe('Writer blog submit routes', () => {
     mockBlogUpdate.mockClear();
   });
 
-  const request = supertest(app);
+  const request = supertest(app.server);
   const endpoint = '/blog/writer/submit/';
 
   it('Should send error if submit blog id is not valid', async () => {
@@ -257,7 +263,7 @@ describe('Writer blog withdraw routes', () => {
     mockBlogUpdate.mockClear();
   });
 
-  const request = supertest(app);
+  const request = supertest(app.server);
   const endpoint = '/blog/writer/withdraw/';
 
   it('Should send error if withdraw blog id is not valid', async () => {
@@ -301,7 +307,7 @@ describe('Writer blog delete routes', () => {
     mockBlogUpdate.mockClear();
   });
 
-  const request = supertest(app);
+  const request = supertest(app.server);
   const endpoint = '/blog/writer/id/';
 
   it('Should send error if deleting blog id is not valid', async () => {
@@ -344,7 +350,7 @@ describe('Writer blog get by id routes', () => {
     mockFindBlogAllDataById.mockClear();
   });
 
-  const request = supertest(app);
+  const request = supertest(app.server);
   const endpoint = '/blog/writer/id/';
 
   it('Should send error if fetching blog id is not valid', async () => {

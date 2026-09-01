@@ -1,22 +1,20 @@
-import express from 'express';
+import { FastifyPluginAsync } from 'fastify';
 import KeystoreRepo from '../../database/repository/KeystoreRepo';
 import { ProtectedRequest } from 'app-request';
 import { SuccessMsgResponse } from '../../core/ApiResponse';
-import asyncHandler from '../../helpers/asyncHandler';
+import notFound from '../../helpers/notFound';
 import authentication from '../../auth/authentication';
 
-const router = express.Router();
+const logout: FastifyPluginAsync = async (router) => {
+  /*-------------------------------------------------------------------------*/
+  router.addHook('preHandler', authentication);
+  /*-------------------------------------------------------------------------*/
+  notFound(router);
 
-/*-------------------------------------------------------------------------*/
-router.use(authentication);
-/*-------------------------------------------------------------------------*/
-
-router.delete(
-  '/',
-  asyncHandler(async (req: ProtectedRequest, res) => {
+  router.delete('/', async (req: ProtectedRequest, res) => {
     await KeystoreRepo.remove(req.keystore._id);
-    new SuccessMsgResponse('Logout success').send(res);
-  }),
-);
+    return new SuccessMsgResponse('Logout success').send(res);
+  });
+};
 
-export default router;
+export default logout;

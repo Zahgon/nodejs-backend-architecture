@@ -12,7 +12,7 @@ Note: This is the **latest (version 2)** of the project. If you are using **vers
 
 # Project Highlights 
 1. Node.js
-2. Express.js
+2. Fastify
 3. Typescript
 4. Mongoose
 5. Redis
@@ -199,7 +199,7 @@ $ npm test
 │   │       ├── RoleRepo.ts
 │   │       └── UserRepo.ts
 │   ├── helpers
-│   │   ├── asyncHandler.ts
+│   │   ├── notFound.ts
 │   │   ├── permission.ts
 │   │   ├── role.ts
 │   │   ├── security.ts
@@ -290,7 +290,7 @@ $ npm test
  ```
  
 ## Directory Traversal for Signup API call
- `/src → server.ts → app.ts → /routes/index.ts → /auth/apikey.ts → schema.ts → /helpers/validator.ts → asyncHandler.ts → /routes/access/signup.ts → schema.ts → /helpers/validator.ts → asyncHandler.ts → /database/repository/UserRepo.ts → /database/model/User.ts → /core/ApiResponses.ts`
+ `/src → server.ts → app.ts → /routes/index.ts → /auth/apikey.ts → schema.ts → /helpers/validator.ts → /routes/access/signup.ts → schema.ts → /helpers/validator.ts → /database/repository/UserRepo.ts → /database/model/User.ts → /core/ApiResponses.ts`
  
 ## API Examples
 * Signup

@@ -3,7 +3,8 @@ import { port } from './config';
 import app from './app';
 
 app
-  .listen(port, () => {
+  .listen({ port: Number(port), host: '0.0.0.0' })
+  .then(() => {
     Logger.info(`server running on port : ${port}`);
   })
-  .on('error', (e) => Logger.error(e));
+  .catch((e) => Logger.error(e));

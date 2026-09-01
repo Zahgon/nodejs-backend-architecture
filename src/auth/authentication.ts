@@ -1,4 +1,4 @@
-import express from 'express';
+import { FastifyReply } from 'fastify';
 import { ProtectedRequest } from 'app-request';
 import UserRepo from '../database/repository/UserRepo';
 import {
@@ -12,31 +12,27 @@ import { Types } from 'mongoose';
 import { getAccessToken, validateTokenData } from './authUtils';
 import validator, { ValidationSource } from '../helpers/validator';
 import schema from './schema';
-import asyncHandler from '../helpers/asyncHandler';
 
-const router = express.Router();
+const validateHeader = validator(schema.auth, ValidationSource.HEADER);
 
-export default router.use(
-  validator(schema.auth, ValidationSource.HEADER),
-  asyncHandler(async (req: ProtectedRequest, res, next) => {
-    req.accessToken = getAccessToken(req.headers.authorization); // Express headers are auto converted to lowercase
+export default async (req: ProtectedRequest, reply: FastifyReply) => {
+  await validateHeader(req, reply);
 
-    try {
-      const payload = await JWT.validate(req.accessToken);
-      validateTokenData(payload);
+  req.accessToken = getAccessToken(req.headers.authorization); // Fastify headers are auto converted to lowercase
 
-      const user = await UserRepo.findById(new Types.ObjectId(payload.sub));
-      if (!user) throw new AuthFailureError('User not registered');
-      req.user = user;
+  try {
+    const payload = await JWT.validate(req.accessToken);
+    validateTokenData(payload);
 
-      const keystore = await KeystoreRepo.findforKey(req.user, payload.prm);
-      if (!keystore) throw new AuthFailureError('Invalid access token');
-      req.keystore = keystore;
+    const user = await UserRepo.findById(new Types.ObjectId(payload.sub));
+    if (!user) throw new AuthFailureError('User not registered');
+    req.user = user;
 
-      return next();
-    } catch (e) {
-      if (e instanceof TokenExpiredError) throw new AccessTokenError(e.message);
-      throw e;
-    }
-  }),
-);
+    const keystore = await KeystoreRepo.findforKey(req.user, payload.prm);
+    if (!keystore) throw new AuthFailureError('Invalid access token');
+    req.keystore = keystore;
+  } catch (e) {
+    if (e instanceof TokenExpiredError) throw new AccessTokenError(e.message);
+    throw e;
+  }
+};

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Request, Response, NextFunction } from 'express';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { BadRequestError } from '../core/ApiError';
 
 export enum ValidationSource {
@@ -31,10 +31,10 @@ export default (
     schema: z.ZodType,
     source: ValidationSource = ValidationSource.BODY,
   ) =>
-  (req: Request, _res: Response, next: NextFunction): void => {
+  async (req: FastifyRequest, _reply: FastifyReply): Promise<void> => {
     const result = schema.safeParse(req[source]);
 
-    if (result.success) return next();
+    if (result.success) return;
 
     // Prepend field name to every Zod default message:
     //   "Required"       -> "email: Required"
@@ -45,5 +45,5 @@ export default (
       })
       .join(', ');
 
-    next(new BadRequestError(message));
+    throw new BadRequestError(message);
   };

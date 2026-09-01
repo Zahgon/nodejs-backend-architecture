@@ -1,24 +1,21 @@
-import express from 'express';
+import { FastifyReply } from 'fastify';
 import ApiKeyRepo from '../database/repository/ApiKeyRepo';
 import { ForbiddenError } from '../core/ApiError';
 import { PublicRequest } from 'app-request';
 import schema from './schema';
 import validator, { ValidationSource } from '../helpers/validator';
-import asyncHandler from '../helpers/asyncHandler';
 import { Header } from '../core/utils';
 
-const router = express.Router();
+const validateHeader = validator(schema.apiKey, ValidationSource.HEADER);
 
-export default router.use(
-  validator(schema.apiKey, ValidationSource.HEADER),
-  asyncHandler(async (req: PublicRequest, res, next) => {
-    const key = req.headers[Header.API_KEY]?.toString();
-    if (!key) throw new ForbiddenError();
+export default async (req: PublicRequest, reply: FastifyReply) => {
+  await validateHeader(req, reply);
 
-    const apiKey = await ApiKeyRepo.findByKey(key);
-    if (!apiKey) throw new ForbiddenError();
+  const key = req.headers[Header.API_KEY]?.toString();
+  if (!key) throw new ForbiddenError();
 
-    req.apiKey = apiKey;
-    return next();
-  }),
-);
+  const apiKey = await ApiKeyRepo.findByKey(key);
+  if (!apiKey) throw new ForbiddenError();
+
+  req.apiKey = apiKey;
+};

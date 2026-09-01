@@ -1,11 +1,13 @@
-import express, { ErrorRequestHandler } from 'express';
+import Fastify, { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+import cors from '@fastify/cors';
+import formbody from '@fastify/formbody';
+import qs from 'qs';
 import Logger from './core/Logger';
-import cors from 'cors';
 import { corsUrl, environment } from './config';
 import './database'; // initialize database
 import './cache'; // initialize cache
 import {
-  NotFoundError,
+  BadRequestError,
   ApiError,
   InternalError,
   ErrorType,
@@ -16,40 +18,58 @@ process.on('uncaughtException', (e) => {
   Logger.error(e);
 });
 
-const app = express();
+const BODY_LIMIT = 10 * 1024 * 1024; // 10mb
 
-app.use(express.json({ limit: '10mb' }));
-app.use(
-  express.urlencoded({ limit: '10mb', extended: true, parameterLimit: 50000 }),
+const app = Fastify({ bodyLimit: BODY_LIMIT });
+
+// A body parser is only reached when a body is actually sent, so an empty json
+// payload is resolved to an empty object instead of being rejected.
+app.addContentTypeParser<string>(
+  'application/json',
+  { parseAs: 'string', bodyLimit: BODY_LIMIT },
+  (_req, body, done) => {
+    if (!body) return done(null, {});
+    try {
+      done(null, JSON.parse(body));
+    } catch (e) {
+      done(new BadRequestError('Invalid json body'), undefined);
+    }
+  },
 );
-app.use(cors({ origin: corsUrl, optionsSuccessStatus: 200 }));
+
+app.register(formbody, {
+  bodyLimit: BODY_LIMIT,
+  parser: (body) => qs.parse(body, { parameterLimit: 50000 }),
+});
+app.register(cors, { origin: corsUrl, optionsSuccessStatus: 200 });
 
 // Routes
-app.use('/', routes);
+app.register(routes);
 
-// catch 404 and forward to error handler
-app.use((req, res, next) => next(new NotFoundError()));
-
-// Middleware Error Handler
-const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+// Error Handler
+const errorHandler = (
+  err: FastifyError,
+  req: FastifyRequest,
+  res: FastifyReply,
+) => {
   if (err instanceof ApiError) {
     ApiError.handle(err, res);
     if (err.type === ErrorType.INTERNAL)
       Logger.error(
-        `500 - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`,
+        `500 - ${err.message} - ${req.url} - ${req.method} - ${req.ip}`,
       );
   } else {
     Logger.error(
-      `500 - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`,
+      `500 - ${err.message} - ${req.url} - ${req.method} - ${req.ip}`,
     );
     Logger.error(err);
     if (environment === 'development') {
-      res.status(500).send(err);
+      return res.status(500).send(err);
     }
     ApiError.handle(new InternalError(), res);
   }
 };
 
-app.use(errorHandler);
+app.setErrorHandler(errorHandler);
 
 export default app;

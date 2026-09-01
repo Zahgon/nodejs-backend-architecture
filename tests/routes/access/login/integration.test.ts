@@ -18,9 +18,15 @@ export const bcryptCompareSpy = jest.spyOn(bcrypt, 'compare');
 export const userFindByEmailSpy = jest.spyOn(UserRepo, 'findByEmail');
 export const keystoreCreateSpy = jest.spyOn(KeystoreRepo, 'create');
 
+// fastify builds its router while booting, so the instance has to be ready
+// before its http server can answer the requests made by supertest
+beforeAll(async () => {
+  await app.ready();
+});
+
 describe('Login basic route', () => {
   const endpoint = '/login/basic';
-  const request = supertest(app);
+  const request = supertest(app.server);
   const password = '123456';
 
   let user: User;

@@ -1,23 +1,21 @@
-import express from 'express';
+import { FastifyPluginAsync } from 'fastify';
 import { SuccessResponse } from '../../core/ApiResponse';
 import UserRepo from '../../database/repository/UserRepo';
 import { ProtectedRequest } from 'app-request';
 import { BadRequestError } from '../../core/ApiError';
 import validator from '../../helpers/validator';
 import schema from './schema';
-import asyncHandler from '../../helpers/asyncHandler';
+import notFound from '../../helpers/notFound';
 import _ from 'lodash';
 import authentication from '../../auth/authentication';
 
-const router = express.Router();
+const profile: FastifyPluginAsync = async (router) => {
+  /*-------------------------------------------------------------------------*/
+  router.addHook('preHandler', authentication);
+  /*-------------------------------------------------------------------------*/
+  notFound(router);
 
-/*-------------------------------------------------------------------------*/
-router.use(authentication);
-/*-------------------------------------------------------------------------*/
-
-router.get(
-  '/my',
-  asyncHandler(async (req: ProtectedRequest, res) => {
+  router.get('/my', async (req: ProtectedRequest, res) => {
     const user = await UserRepo.findPrivateProfileById(req.user._id);
     if (!user) throw new BadRequestError('User not registered');
 
@@ -25,25 +23,25 @@ router.get(
       'success',
       _.pick(user, ['name', 'email', 'profilePicUrl', 'roles']),
     ).send(res);
-  }),
-);
+  });
 
-router.put(
-  '/',
-  validator(schema.profile),
-  asyncHandler(async (req: ProtectedRequest, res) => {
-    const user = await UserRepo.findPrivateProfileById(req.user._id);
-    if (!user) throw new BadRequestError('User not registered');
+  router.put(
+    '/',
+    { preHandler: [validator(schema.profile)] },
+    async (req: ProtectedRequest, res) => {
+      const user = await UserRepo.findPrivateProfileById(req.user._id);
+      if (!user) throw new BadRequestError('User not registered');
 
-    if (req.body.name) user.name = req.body.name;
-    if (req.body.profilePicUrl) user.profilePicUrl = req.body.profilePicUrl;
+      if (req.body.name) user.name = req.body.name;
+      if (req.body.profilePicUrl) user.profilePicUrl = req.body.profilePicUrl;
 
-    await UserRepo.updateInfo(user);
+      await UserRepo.updateInfo(user);
 
-    const data = _.pick(user, ['name', 'profilePicUrl']);
+      const data = _.pick(user, ['name', 'profilePicUrl']);
 
-    return new SuccessResponse('Profile updated', data).send(res);
-  }),
-);
+      return new SuccessResponse('Profile updated', data).send(res);
+    },
+  );
+};
 
-export default router;
+export default profile;

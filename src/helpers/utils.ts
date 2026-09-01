@@ -1,8 +1,8 @@
-import { Request } from 'express';
+import { FastifyRequest } from 'fastify';
 import moment from 'moment';
 import Logger from '../core/Logger';
 
-export function findIpAddress(req: Request) {
+export function findIpAddress(req: FastifyRequest) {
   try {
     if (req.headers['x-forwarded-for']) {
       return req.headers['x-forwarded-for'].toString().split(',')[0];

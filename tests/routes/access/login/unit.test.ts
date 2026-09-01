@@ -16,9 +16,15 @@ import {
 import supertest from 'supertest';
 import app from '../../../../src/app';
 
+// fastify builds its router while booting, so the instance has to be ready
+// before its http server can answer the requests made by supertest
+beforeAll(async () => {
+  await app.ready();
+});
+
 describe('Login basic route', () => {
   const endpoint = '/login/basic';
-  const request = supertest(app);
+  const request = supertest(app.server);
 
   beforeEach(() => {
     mockKeystoreCreate.mockClear();

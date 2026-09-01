@@ -18,6 +18,12 @@ import supertest from 'supertest';
 import app from '../../../../src/app';
 import { Types } from 'mongoose';
 
+// fastify builds its router while booting, so the instance has to be ready
+// before its http server can answer the requests made by supertest
+beforeAll(async () => {
+  await app.ready();
+});
+
 describe('BlogDetail by URL route', () => {
   beforeEach(() => {
     mockBlogCacheFetchByUrl.mockClear();
@@ -25,7 +31,7 @@ describe('BlogDetail by URL route', () => {
     mockPublishedBlogFindByUrl.mockClear();
   });
 
-  const request = supertest(app);
+  const request = supertest(app.server);
   const endpoint = '/blog/url';
 
   it('Should send error when endpoint query is not passed', async () => {
@@ -106,7 +112,7 @@ describe('BlogDetail by id route', () => {
     mockPublishedBlogFindById.mockClear();
   });
 
-  const request = supertest(app);
+  const request = supertest(app.server);
   const endpoint = '/blog/id/';
 
   it('Should send error when invalid id is passed', async () => {

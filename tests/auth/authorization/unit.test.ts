@@ -14,9 +14,15 @@ import app from '../../../src/app';
 import supertest from 'supertest';
 import { RoleCode } from '../../../src/database/model/Role';
 
+// fastify builds its router while booting, so the instance has to be ready
+// before its http server can answer the requests made by supertest
+beforeAll(async () => {
+  await app.ready();
+});
+
 describe('authentication validation for editor', () => {
   const endpoint = '/blog/editor/test';
-  const request = supertest(app);
+  const request = supertest(app.server);
 
   beforeEach(() => {
     mockRoleRepoFindByCodes.mockClear();
@@ -38,7 +44,7 @@ describe('authentication validation for editor', () => {
 
 describe('authentication validation for writer', () => {
   const endpoint = '/blog/writer/test';
-  const request = supertest(app);
+  const request = supertest(app.server);
 
   beforeEach(() => {
     mockRoleRepoFindByCodes.mockClear();

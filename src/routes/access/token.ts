@@ -1,4 +1,4 @@
-import express from 'express';
+import { FastifyPluginAsync } from 'fastify';
 import { TokenRefreshResponse } from '../../core/ApiResponse';
 import { ProtectedRequest } from 'app-request';
 import { Types } from 'mongoose';
@@ -14,57 +14,60 @@ import {
 } from '../../auth/authUtils';
 import validator, { ValidationSource } from '../../helpers/validator';
 import schema from './schema';
-import asyncHandler from '../../helpers/asyncHandler';
 
-const router = express.Router();
+const token: FastifyPluginAsync = async (router) => {
+  router.post(
+    '/refresh',
+    {
+      preHandler: [
+        validator(schema.auth, ValidationSource.HEADER),
+        validator(schema.refreshToken),
+      ],
+    },
+    async (req: ProtectedRequest, res) => {
+      req.accessToken = getAccessToken(req.headers.authorization); // Fastify headers are auto converted to lowercase
 
-router.post(
-  '/refresh',
-  validator(schema.auth, ValidationSource.HEADER),
-  validator(schema.refreshToken),
-  asyncHandler(async (req: ProtectedRequest, res) => {
-    req.accessToken = getAccessToken(req.headers.authorization); // Express headers are auto converted to lowercase
+      const accessTokenPayload = await JWT.decode(req.accessToken);
+      validateTokenData(accessTokenPayload);
 
-    const accessTokenPayload = await JWT.decode(req.accessToken);
-    validateTokenData(accessTokenPayload);
+      const user = await UserRepo.findById(
+        new Types.ObjectId(accessTokenPayload.sub),
+      );
+      if (!user) throw new AuthFailureError('User not registered');
+      req.user = user;
 
-    const user = await UserRepo.findById(
-      new Types.ObjectId(accessTokenPayload.sub),
-    );
-    if (!user) throw new AuthFailureError('User not registered');
-    req.user = user;
+      const refreshTokenPayload = await JWT.validate(req.body.refreshToken);
+      validateTokenData(refreshTokenPayload);
 
-    const refreshTokenPayload = await JWT.validate(req.body.refreshToken);
-    validateTokenData(refreshTokenPayload);
+      if (accessTokenPayload.sub !== refreshTokenPayload.sub)
+        throw new AuthFailureError('Invalid access token');
 
-    if (accessTokenPayload.sub !== refreshTokenPayload.sub)
-      throw new AuthFailureError('Invalid access token');
+      const keystore = await KeystoreRepo.find(
+        req.user,
+        accessTokenPayload.prm,
+        refreshTokenPayload.prm,
+      );
 
-    const keystore = await KeystoreRepo.find(
-      req.user,
-      accessTokenPayload.prm,
-      refreshTokenPayload.prm,
-    );
+      if (!keystore) throw new AuthFailureError('Invalid access token');
+      await KeystoreRepo.remove(keystore._id);
 
-    if (!keystore) throw new AuthFailureError('Invalid access token');
-    await KeystoreRepo.remove(keystore._id);
+      const accessTokenKey = crypto.randomBytes(64).toString('hex');
+      const refreshTokenKey = crypto.randomBytes(64).toString('hex');
 
-    const accessTokenKey = crypto.randomBytes(64).toString('hex');
-    const refreshTokenKey = crypto.randomBytes(64).toString('hex');
+      await KeystoreRepo.create(req.user, accessTokenKey, refreshTokenKey);
+      const tokens = await createTokens(
+        req.user,
+        accessTokenKey,
+        refreshTokenKey,
+      );
 
-    await KeystoreRepo.create(req.user, accessTokenKey, refreshTokenKey);
-    const tokens = await createTokens(
-      req.user,
-      accessTokenKey,
-      refreshTokenKey,
-    );
+      return new TokenRefreshResponse(
+        'Token Issued',
+        tokens.accessToken,
+        tokens.refreshToken,
+      ).send(res);
+    },
+  );
+};
 
-    new TokenRefreshResponse(
-      'Token Issued',
-      tokens.accessToken,
-      tokens.refreshToken,
-    ).send(res);
-  }),
-);
-
-export default router;
+export default token;

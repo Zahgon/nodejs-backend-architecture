@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
 
 // Helper code for the API consumer to understand the error and handle is accordingly
 enum StatusCode {
@@ -25,18 +25,18 @@ abstract class ApiResponse {
   ) {}
 
   protected prepare<T extends ApiResponse>(
-    res: Response,
+    res: FastifyReply,
     response: T,
     headers: { [key: string]: string },
-  ): Response {
-    for (const [key, value] of Object.entries(headers)) res.append(key, value);
-    return res.status(this.status).json(ApiResponse.sanitize(response));
+  ): FastifyReply {
+    for (const [key, value] of Object.entries(headers)) res.header(key, value);
+    return res.status(this.status).send(ApiResponse.sanitize(response));
   }
 
   public send(
-    res: Response,
+    res: FastifyReply,
     headers: { [key: string]: string } = {},
-  ): Response {
+  ): FastifyReply {
     return this.prepare<ApiResponse>(res, this, headers);
   }
 
@@ -61,7 +61,10 @@ export class NotFoundResponse extends ApiResponse {
     super(StatusCode.FAILURE, ResponseStatus.NOT_FOUND, message);
   }
 
-  send(res: Response, headers: { [key: string]: string } = {}): Response {
+  send(
+    res: FastifyReply,
+    headers: { [key: string]: string } = {},
+  ): FastifyReply {
     return super.prepare<NotFoundResponse>(res, this, headers);
   }
 }
@@ -101,7 +104,10 @@ export class SuccessResponse<T> extends ApiResponse {
     super(StatusCode.SUCCESS, ResponseStatus.SUCCESS, message);
   }
 
-  send(res: Response, headers: { [key: string]: string } = {}): Response {
+  send(
+    res: FastifyReply,
+    headers: { [key: string]: string } = {},
+  ): FastifyReply {
     return super.prepare<SuccessResponse<T>>(res, this, headers);
   }
 }
@@ -117,7 +123,10 @@ export class AccessTokenErrorResponse extends ApiResponse {
     );
   }
 
-  send(res: Response, headers: { [key: string]: string } = {}): Response {
+  send(
+    res: FastifyReply,
+    headers: { [key: string]: string } = {},
+  ): FastifyReply {
     headers.instruction = this.instruction;
     return super.prepare<AccessTokenErrorResponse>(res, this, headers);
   }
@@ -132,7 +141,10 @@ export class TokenRefreshResponse extends ApiResponse {
     super(StatusCode.SUCCESS, ResponseStatus.SUCCESS, message);
   }
 
-  send(res: Response, headers: { [key: string]: string } = {}): Response {
+  send(
+    res: FastifyReply,
+    headers: { [key: string]: string } = {},
+  ): FastifyReply {
     return super.prepare<TokenRefreshResponse>(res, this, headers);
   }
 }
